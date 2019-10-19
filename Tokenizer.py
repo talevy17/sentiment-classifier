@@ -1,12 +1,11 @@
-from nltk.tokenize import sent_tokenize, word_tokenize, WhitespaceTokenizer
+from nltk.tokenize import sent_tokenize, WhitespaceTokenizer
 from nltk.corpus import stopwords
-import re
 
 
 class Tokenizer:
     def __init__(self, file, langs):
         sample = open(file)
-        self.data = sample.read()
+        self.data = sample.read().replace('\n', ' ')
         sample.close()
         self.stop = set('')
         for lang in langs:
@@ -27,6 +26,5 @@ class Tokenizer:
                 if self.regex(j) and (j.lower() not in self.stop) and len(j) > 1:
                     temp.append(j.lower())
                     print(j)
-
             data.append(temp)
         return data
