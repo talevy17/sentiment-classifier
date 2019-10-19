@@ -3,14 +3,14 @@ from nltk.corpus import stopwords
 
 
 class Tokenizer:
-    def __init__(self, file, langs):
+    def __init__(self, file, langs, punctuation):
         sample = open(file)
         self.data = sample.read().replace('\n', ' ')
         sample.close()
         self.stop = set('')
         for lang in langs:
             self.stop = self.stop | set((set(stopwords.words(lang))))
-        self.punct = '''!()-[]{};:"\,<>./?@#$%^&*_~'''
+        self.punct = punctuation
 
     def regex(self, word):
         for char in word:
