@@ -1,6 +1,9 @@
 from Tokenizer import Tokenizer as tk
-from SimpleNeuralNet import SimpleNeuralNet as nn
+from SimpleNeuralNet import SimpleNeuralNet
 from enum import Enum
+import numpy
+import torch
+from torch import nn
 import gensim
 import random
 import warnings
@@ -14,8 +17,55 @@ class Constants(Enum):
     Epochs = 7
 
 
-def cross_validataion(train_set, labels):
-    cut = 300
+# def train(fc, opt, word2vec, data, label_set):
+#     loss_function = nn.MSELoss()
+#     labels = numpy.asarray(label_set)
+#     for epoch in range(1):
+#         fc.train()
+#         # print('Epoch: ' + str(epoch))
+#         for k, (word, label) in enumerate(zip(data, labels)):
+#             temp = torch.from_numpy(word2vec[word])
+#             temp = temp.reshape(-1, temp.size(0))
+#             prediction = fc(temp)
+#             loss = loss_function(prediction, torch.tensor(label))
+#             opt.zero_grad()
+#             loss.backward()
+#             opt.step()
+#         # validation(conv, valid_set, device)
+#     return fc
+#
+#
+# def validate(net, word2vec, data, labels):
+#     net.eval()
+#     with torch.no_grad():
+#         correct = 0
+#         total = 0
+#         for word, label in zip(data, labels):
+#             # calc on device (CPU or GPU)
+#             # calc the prediction vector using the model's forward pass.
+#             temp = torch.from_numpy(word2vec[word])
+#             temp = temp.reshape(-1, temp.size(0))
+#             pred = net(temp)
+#             print(pred)
+#             total += 1
+#             if pred.data * torch.tensor(label).data > 0:
+#                 correct += 1
+#         # print the accuracy of the model.
+#         print('Test Accuracy of the model: {}%'.format((correct / total) * 100))
+#
+#
+# def test(net, word2vec, test):
+#     net.eval()
+#     with torch.no_grad():
+#         for word in test:
+#             # calc on device (CPU or GPU)
+#             # calc the prediction vector using the model's forward pass.
+#             pred = net(word2vec[word])
+#             print(word+' '+pred)
+
+
+def cross_validation(train_set, labels):
+    cut = 1100
     train_data = train_set[: cut]
     train_labels = labels[: cut]
     valid_data = train_set[cut:]
@@ -31,7 +81,7 @@ def split_data(x):
         i = i.replace('\n', '')
         temp = i.split('\t')
         data.append(temp[1])
-        labels.append(temp[0])
+        labels.append(numpy.asarray(float(temp[0])))
     tok.append(data)
     return data, labels, tok
 
@@ -47,10 +97,13 @@ def main():
     file.close()
     data, labels, tok = split_data(data)
     model = gensim.models.Word2Vec(tok, min_count=1, size=300, window=5, sg=1)
-    train_data, train_labels, valid_data, valid_labels = cross_validataion(data, labels)
-    net = nn(model)
-    net.train(train_data, train_labels)
-    net.validate(valid_data, valid_labels)
+    train_data, train_labels, valid_data, valid_labels = cross_validation(data, labels)
+    fc = SimpleNeuralNet(model)
+    # print(len(train_labels))
+    fc.train(train_data, train_labels)
+    fc.validate(valid_data, valid_labels)
+    # net.train(data, labels)
+    # net.validate(data, labels)
 
 
 def first_ass():
