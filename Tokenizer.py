@@ -25,6 +25,5 @@ class Tokenizer:
             for j in WhitespaceTokenizer().tokenize(i):
                 if self.regex(j) and (j.lower() not in self.stop) and len(j) > 1:
                     temp.append(j.lower())
-                    print(j)
             data.append(temp)
         return data
