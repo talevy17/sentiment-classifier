@@ -7,7 +7,7 @@ from collections import defaultdict
 
 class DataCleaner:
     def __init__(self, file):
-        self.data = pd.read_csv(file)
+        self.data = pd.read_csv(file, usecols =["genre","lyrics"])
         print(self.data.shape)
         self.data = self.data.dropna().reset_index(drop=True)
         print(self.data.isnull().sum())
