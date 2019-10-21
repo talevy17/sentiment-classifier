@@ -45,7 +45,6 @@ class SimpleNeuralNet:
                 temp = torch.from_numpy(self.word2vec[word])
                 temp = temp.reshape(-1, temp.size(0))
                 pred = self.net(temp)
-                print(pred)
                 total += 1
                 if pred.data * torch.tensor(label).data > 0:
                     correct += 1
@@ -53,6 +52,10 @@ class SimpleNeuralNet:
             print('Test Accuracy of the model: {}%'.format((correct / total) * 100))
 
     def test(self, test, model_test):
+<<<<<<< HEAD
+=======
+        print(model_test.wv.vocab)
+>>>>>>> 05bbabd2e52bd15120f5fa9f387e64cebb6f4139
         self.net.eval()
         with torch.no_grad():
             for song in test:

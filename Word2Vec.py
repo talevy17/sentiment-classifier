@@ -1,4 +1,5 @@
 from Tokenizer import Tokenizer as tk
+from DataCleaner import DataCleaner as dc
 from SimpleNeuralNet import SimpleNeuralNet
 from enum import Enum
 import numpy
@@ -96,11 +97,15 @@ def main():
     data = shuffle_data(file.readlines())
     file.close()
     data, labels, tok = split_data(data)
-    model = gensim.models.Word2Vec(tok, min_count=1, size=300, window=5, sg=1)
-    token = tk('./Dataset/lyrics15LIN.csv', ['english', 'spanish'], '''!()-[]{};:"\,<>./?@#$%^&*_~''')
-    token = token.tokenize()
-    model_test = gensim.models.Word2Vec(token, min_count=20, size=300, window=5, sg=1)
-
+    model = gensim.models.Word2Vec(tok, min_count=1, size=300, window=5, sg=1, iter=1)
+    # token = tk('./Dataset/lyrics15LIN.csv', ['english', 'spanish'], '''!()-[]{};:"\,<>./?@#$%^&*_~''')
+    toke = dc('./Dataset/lyrics15LIN.csv')
+    token = toke.clean_data()
+    token = toke.tokenize(token)
+    print(token)
+    model_test = gensim.models.Word2Vec(min_count=1, size=300, window=5, sg=1, iter=1)
+    #model_test.build_vocab(token)
+    #model_test.train(token,total_examples=model.corpus_count,epochs=1)
     # train_data, train_labels, valid_data, valid_labels = cross_validation(data, labels)
     fc = SimpleNeuralNet(model)
     # print(len(train_labels))
