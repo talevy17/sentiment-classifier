@@ -52,10 +52,8 @@ class SimpleNeuralNet:
             print('Test Accuracy of the model: {}%'.format((correct / total) * 100))
 
     def test(self, test, model_test):
-<<<<<<< HEAD
-=======
+
         print(model_test.wv.vocab)
->>>>>>> 05bbabd2e52bd15120f5fa9f387e64cebb6f4139
         self.net.eval()
         with torch.no_grad():
             for song in test:

@@ -1,3 +1,5 @@
+import nltk
+
 from Tokenizer import Tokenizer as tk
 from DataCleaner import DataCleaner as dc
 from SimpleNeuralNet import SimpleNeuralNet
@@ -8,6 +10,12 @@ from torch import nn
 import gensim
 import random
 import warnings
+import pandas as pd
+import logging
+from gensim.models import Word2Vec
+
+from sklearn.linear_model import LinearRegression
+
 warnings.filterwarnings(action='ignore')
 
 class Constants(Enum):
@@ -83,7 +91,7 @@ def split_data(x):
         temp = i.split('\t')
         data.append(temp[1])
         labels.append(numpy.asarray(float(temp[0])))
-    tok.append(data)
+    tok = data
     return data, labels, tok
 
 
@@ -92,38 +100,65 @@ def shuffle_data(x):
     return x
 
 
-def main():
+def aaa():
     file = open(Constants.SEM_EVAL.value, 'r')
     data = shuffle_data(file.readlines())
     file.close()
-    data, labels, tok = split_data(data)
-    model = gensim.models.Word2Vec(tok, min_count=1, size=300, window=5, sg=1, iter=1)
-    # token = tk('./Dataset/lyrics15LIN.csv', ['english', 'spanish'], '''!()-[]{};:"\,<>./?@#$%^&*_~''')
-    toke = dc('./Dataset/lyrics15LIN.csv')
-    token = toke.clean_data()
-    token = toke.tokenize(token)
-    print(token)
-    model_test = gensim.models.Word2Vec(min_count=1, size=300, window=5, sg=1, iter=1)
-    #model_test.build_vocab(token)
-    #model_test.train(token,total_examples=model.corpus_count,epochs=1)
+    data, labels, Semtok = split_data(data)
+    model = gensim.models.Word2Vec(min_count=20, size=300, window=5, sg=1, iter=1)
+    model.build_vocab(Semtok)
+    toke = tk('./Dataset/lyrics15LIN.csv', ['english', 'spanish'], '''!()-[]{};:"\,<>./?@#$%^&*_~''')
+    tokenSongs = toke.tokenize()
+    model_test = gensim.models.Word2Vec(min_count=20, size=300, window=5, sg=1, iter=1)
+    model_test.build_vocab(tokenSongs)
+    model_test.train(tokenSongs,total_examples=model.corpus_count,epochs=1)
+
     # train_data, train_labels, valid_data, valid_labels = cross_validation(data, labels)
     fc = SimpleNeuralNet(model)
     # print(len(train_labels))
     fc.train(data, labels)
-    fc.test(tok, model_test)
-    # fc.validate(valid_data, valid_labels)
+    fc.test(Semtok, model_test)
+    #fc.validate(valid_data, valid_labels)
     # net.train(data, labels)
     # net.validate(data, labels)
+def load(path):
+        logging.basicConfig(format="%(levelname)s - %(asctime)s: %(message)s", datefmt= '%H:%M:%S', level=logging.INFO)
+        file = pd.read_csv(path)
+        file = file[file['lyrics'].notnull()]
+        tokenizer = nltk.data.load('tokenizers/punkt/english.pickle')
+        return file,tokenizer
+def word2vec(sentences, num_features=300, min_word_count=40, workers=4,
+             context=10, downsampling=1e-3):
+    model = Word2Vec(sentences,
+                     workers=workers,
+                     size=num_features,
+                     min_count=min_word_count,
+                     window=context,
+                     sample=downsampling)
+    model.init_sims(replace=True)
+    model_name = "{}features_{}minwords_{}context".format(num_features,
+                                                              min_word_count,
+                                                              context)
+    model.save(model_name)
+    return model
 
 
-def first_ass():
-    tok = tk('./Dataset/lyrics15LIN.csv', ['english', 'spanish'], '''!()-[]{};:"\,<>./?@#$%^&*_~''')
-    model = gensim.models.Word2Vec(tok.tokenize(), min_count=20, size=300, window=5, sg=1)
-    print(model.similarity('man', 'something'))
-    b = (model['king'] - model['man'] + model['woman'])
-    print(model.similar_by_vector(b))
-    b = (model['jesus'] + model['cross'])
-    print(model.similar_by_vector(b))
+def main():
+    path = './Dataset/lyrics15LIN.csv'
+    file,tokenizer = load(path)
+    tok = dc(file, ['english', 'spanish'], '''!()-[]{};:"\,<>./?@#$%^&*_~''')
+    sentences =[]
+    for song_lyrics in file["lyrics"]:
+        sentences += tok.tokenize_sentences(song_lyrics)
+    word2vec(sentences)
+    model = Word2Vec.load("300features_40minwords_10context")
+    print(model.wv.most_similar(positive=['woman', 'king'], negative=['man']))
+    # print(len(model.wv.vocab))
+    # print(model.wv.vocab)
+    # b = (model['king'] - model['man'] + model['woman'])
+    # print(model.similar_by_vector(b))
+    # b = (model['jesus'] + model['cross'])
+    # print(model.similar_by_vector(b))
 
 
 if __name__ == "__main__":
