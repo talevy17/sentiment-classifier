@@ -5,14 +5,13 @@ from DataCleaner import DataCleaner as dc
 from SimpleNeuralNet import SimpleNeuralNet
 from enum import Enum
 import numpy
-import torch
-from torch import nn
 import gensim
 import random
 import warnings
 import pandas as pd
 import logging
 from gensim.models import Word2Vec
+import re
 
 from sklearn.linear_model import LinearRegression
 
@@ -127,7 +126,7 @@ def load(path):
         file = file[file['lyrics'].notnull()]
         tokenizer = nltk.data.load('tokenizers/punkt/english.pickle')
         return file,tokenizer
-def word2vec(sentences, num_features=300, min_word_count=40, workers=4,
+def word2vec(sentences, name, num_features=300, min_word_count=40, workers=4,
              context=10, downsampling=1e-3):
     model = Word2Vec(sentences,
                      workers=workers,
@@ -136,23 +135,27 @@ def word2vec(sentences, num_features=300, min_word_count=40, workers=4,
                      window=context,
                      sample=downsampling)
     model.init_sims(replace=True)
-    model_name = "{}features_{}minwords_{}context".format(num_features,
-                                                              min_word_count,
-                                                              context)
+    model_name = "Dataset/{}".format(name)
     model.save(model_name)
     return model
 
+def buildModelWordToVec(path,data,name):
+    tok = dc(path, ['english', 'spanish'], '''!()-[]{};:"\,<>./?@#$%^&*_~''')
+    sentences =[]
+    for song_lyrics in data:
+        sentences += tok.tokenize_sentences(song_lyrics)
+    word2vec(sentences, name)
+
 
 def main():
-    path = './Dataset/lyrics15LIN.csv'
+    path = './Dataset/lyrics.csv'
     file,tokenizer = load(path)
-    tok = dc(file, ['english', 'spanish'], '''!()-[]{};:"\,<>./?@#$%^&*_~''')
-    sentences =[]
-    for song_lyrics in file["lyrics"]:
-        sentences += tok.tokenize_sentences(song_lyrics)
-    word2vec(sentences)
-    model = Word2Vec.load("300features_40minwords_10context")
-    print(model.wv.most_similar(positive=['woman', 'king'], negative=['man']))
+    data = file['lyrics']
+    name = "LIN380"
+    buildModelWordToVec(path,data,name)
+    toOpen = "./Dataset/" + name
+    model = Word2Vec.load(toOpen)
+    print(model.wv.most_similar('queen'))
     # print(len(model.wv.vocab))
     # print(model.wv.vocab)
     # b = (model['king'] - model['man'] + model['woman'])
