@@ -145,24 +145,39 @@ def buildModelWordToVec(path,data,name):
     for song_lyrics in data:
         sentences += tok.tokenize_sentences(song_lyrics)
     word2vec(sentences, name)
+def similarities(model):
+    print(model.wv.most_similar('house'))
+    print(model.wv.most_similar('king'))
+    print(model.wv.most_similar('israel'))
+    print(model.wv.most_similar('jesus'))
+    print(model.wv.most_similar('mother'))
+    print(model.wv.most_similar('god'))
 
+def VectorsAlgebra(model):
+    print(model.wv.most_similar(positive=['woman', 'king'], negative=['man']))
+    print(model.wv.most_similar(positive=['jewish', 'king'], negative=['jesus']))
+    print(model.wv.most_similar(positive=['spider', 'pig'], negative=['web']))
+    print(model.similar_by_vector(model['king'] + model['woman'] - model['man']))
+    print(model.similar_by_vector(model['spider'] + model['pig']))
+
+def distances(model, w1,w2):
+    cd = model.wv.similarity(w1, w2)
+    print("Cosine Distance = ", cd)
+
+    ed = numpy.linalg.norm(model[w1] - model[w2])
+    print("Euclidean Distance = ", ed)
 
 def main():
     path = './Dataset/lyrics.csv'
     file,tokenizer = load(path)
     data = file['lyrics']
     name = "LIN380"
-    buildModelWordToVec(path,data,name)
+    #buildModelWordToVec(path,data,name)
     toOpen = "./Dataset/" + name
     model = Word2Vec.load(toOpen)
-    print(model.wv.most_similar('queen'))
-    # print(len(model.wv.vocab))
-    # print(model.wv.vocab)
-    # b = (model['king'] - model['man'] + model['woman'])
-    # print(model.similar_by_vector(b))
-    # b = (model['jesus'] + model['cross'])
-    # print(model.similar_by_vector(b))
-
+    #similarities(model)
+    #VectorsAlgebra(model)
+    distances(model, 'woman','girl')
 
 if __name__ == "__main__":
     main()
