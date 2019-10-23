@@ -56,12 +56,12 @@ class SimpleNeuralNet:
         print(model_test.wv.vocab)
         self.net.eval()
         with torch.no_grad():
-            for song in test:
-                for word in song:
-                    # calc on device (CPU or GPU)
-                    # calc the prediction vector using the model's forward pass.
-                    if word in model_test.wv.vocab:
-                        temp = torch.from_numpy(model_test[word])
-                        temp = temp.reshape(-1, temp.size(0))
-                        pred = self.net(temp)
-                        print(str(word) + ' ' + str(pred.data[0]))
+            for word in test:
+                # calc on device (CPU or GPU)
+                # calc the prediction vector using the model's forward pass.
+                if word in model_test.wv.vocab:
+                    temp = torch.from_numpy(model_test[word])
+                    temp = temp.reshape(-1, temp.size(0))
+                    pred = self.net(temp)
+                    print(str(word) + ' ' + str(pred.data[0]))
+

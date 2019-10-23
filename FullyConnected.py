@@ -9,5 +9,5 @@ class FullyConnected(nn.Module):
         self.fc2 = nn.Linear(200, 1)
 
     def forward(self, x):
-        x = F.tanh(self.fc1(x))
+        x = F.relu(self.fc1(x))
         return self.fc2(x)

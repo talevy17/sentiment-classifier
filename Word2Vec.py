@@ -90,7 +90,7 @@ def split_data(x):
         temp = i.split('\t')
         data.append(temp[1])
         labels.append(numpy.asarray(float(temp[0])))
-    tok = data
+    tok.append(data)
     return data, labels, tok
 
 
@@ -168,7 +168,7 @@ def distances(model, w1,w2):
     print("Euclidean Distance = ", ed)
 
 def main():
-    path = './Dataset/lyrics.csv'
+    path = './Dataset/lyrics15LIN.csv'
     file,tokenizer = load(path)
     data = file['lyrics']
     name = "LIN380"
@@ -177,7 +177,19 @@ def main():
     model = Word2Vec.load(toOpen)
     #similarities(model)
     #VectorsAlgebra(model)
-    distances(model, 'woman','girl')
+    #distances(model, 'woman','girl')
+    file = open(Constants.SEM_EVAL.value, 'r')
+    data = shuffle_data(file.readlines())
+    file.close()
+    data, labels, Semtok = split_data(data)
+    #word2vec(Semtok, 'SemEVAL', 300, 1, 4,10,1e-3)
+    modelSem = Word2Vec.load('./Dataset/SemEVAL')
+    print(modelSem.wv.vocab)
+    #fc = SimpleNeuralNet(modelSem)
+    #fc.train(data, labels)
+    #fc.test(model.wv.vocab,model)
+
+
 
 if __name__ == "__main__":
     main()
