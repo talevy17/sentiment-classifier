@@ -12,6 +12,7 @@ import pandas as pd
 import logging
 from gensim.models import Word2Vec
 import re
+from FullyConnected import FullyConnected as Fc
 
 from sklearn.linear_model import LinearRegression
 
@@ -115,8 +116,8 @@ def aaa():
     # train_data, train_labels, valid_data, valid_labels = cross_validation(data, labels)
     fc = SimpleNeuralNet(model)
     # print(len(train_labels))
-    fc.train(data, labels)
-    fc.test(Semtok, model_test)
+    fc.train(data, labels,network)
+    fc.test(Semtok, model_test, network)
     #fc.validate(valid_data, valid_labels)
     # net.train(data, labels)
     # net.validate(data, labels)
@@ -166,12 +167,18 @@ def distances(model, w1,w2):
 
     ed = numpy.linalg.norm(model[w1] - model[w2])
     print("Euclidean Distance = ", ed)
+def fully_connected(model,modelSEM,data, labels,network):
+    fc = SimpleNeuralNet(modelSEM)
+    fc.train(data, labels,network)
+    dict  = fc.test(model.wv.vocab,model,network)
+    return dict
+
 
 def main():
-    path = './Dataset/lyrics15LIN.csv'
+    path = './Dataset/lyrics.csv'
     file,tokenizer = load(path)
     data = file['lyrics']
-    name = "LIN380"
+    name = "LIN380new"
     #buildModelWordToVec(path,data,name)
     toOpen = "./Dataset/" + name
     model = Word2Vec.load(toOpen)
@@ -179,16 +186,21 @@ def main():
     #VectorsAlgebra(model)
     #distances(model, 'woman','girl')
     file = open(Constants.SEM_EVAL.value, 'r')
-    data = shuffle_data(file.readlines())
+    #data = shuffle_data(file.readlines())
+    data = (file.readlines())
+
     file.close()
     data, labels, Semtok = split_data(data)
     #word2vec(Semtok, 'SemEVAL', 300, 1, 4,10,1e-3)
     modelSem = Word2Vec.load('./Dataset/SemEVAL')
-    print(modelSem.wv.vocab)
-    #fc = SimpleNeuralNet(modelSem)
-    #fc.train(data, labels)
-    #fc.test(model.wv.vocab,model)
+    network = Fc()
+    dict =fully_connected(model,modelSem,data,labels,network)
 
+
+    for i in sorted(dict.values(),reverse = True):
+        for j in dict.keys():
+            if dict.get(j) == i:
+                print(j, ":", i)
 
 
 if __name__ == "__main__":

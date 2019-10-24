@@ -1,4 +1,5 @@
-from FullyConnected import FullyConnected as Fc
+from torch import optim
+
 import torch.nn as nn
 import numpy
 import torch
@@ -8,8 +9,6 @@ import random
 class SimpleNeuralNet:
     def __init__(self, model):
         self.word2vec = model
-        self.net = Fc()
-        self.opt = torch.optim.Adam(self.net.parameters(), lr=0.001)
 
     def shuffle(self, x, y):
         zip_x_y = list(zip(x, y))
@@ -17,25 +16,26 @@ class SimpleNeuralNet:
         new_x, new_y = zip(*zip_x_y)
         return new_x, new_y
 
-    def train(self, data, label_set):
+    def train(self, data, label_set,network):
+        self.opt = torch.optim.Adam(network.parameters(), lr=0.001)
         loss_function = nn.MSELoss()
         labels = numpy.asarray(label_set)
         for epoch in range(5):
-            self.net.train()
+            network.train()
             # print('Epoch: ' + str(epoch))
             data, labels = self.shuffle(data, labels)
             for k, (word, label) in enumerate(zip(data, labels)):
                 temp = torch.from_numpy(self.word2vec[word])
                 temp = temp.reshape(-1, temp.size(0))
-                prediction = self.net(temp)
+                prediction = network(temp)
                 loss = loss_function(prediction, torch.tensor(label))
                 self.opt.zero_grad()
                 loss.backward()
                 self.opt.step()
             # validation(conv, valid_set, device)
 
-    def validate(self, data, labels):
-        self.net.eval()
+    def validate(self, data, labels,network):
+        network.eval()
         with torch.no_grad():
             correct = 0
             total = 0
@@ -51,10 +51,10 @@ class SimpleNeuralNet:
             # print the accuracy of the model.
             print('Test Accuracy of the model: {}%'.format((correct / total) * 100))
 
-    def test(self, test, model_test):
-
+    def test(self, test, model_test,network):
+        dict = {}
         print(model_test.wv.vocab)
-        self.net.eval()
+        network.eval()
         with torch.no_grad():
             for word in test:
                 # calc on device (CPU or GPU)
@@ -62,6 +62,11 @@ class SimpleNeuralNet:
                 if word in model_test.wv.vocab:
                     temp = torch.from_numpy(model_test[word])
                     temp = temp.reshape(-1, temp.size(0))
-                    pred = self.net(temp)
-                    print(str(word) + ' ' + str(pred.data[0]))
+                    pred = (network(temp))
+                    pred = pred.data[0].item()
+                    dict[word] = pred
+                    #print(word + ' , ' + str(pred))
+                    #print(str(word) + ' ' + str(pred.data[0]))
+        return dict
+
 

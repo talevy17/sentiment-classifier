@@ -15,7 +15,7 @@ class DataCleaner:
         for lang in langs:
             self.stop = self.stop | (set(stopwords.words(lang)))
         self.stop = self.stop | set(punctuation)
-        self.punc = punctuation
+        self.punct = punctuation
 
     def regex(self, word):
         for char in word:
