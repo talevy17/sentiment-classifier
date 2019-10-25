@@ -44,7 +44,7 @@ class SimpleNeuralNet:
                 # calc the prediction vector using the model's forward pass.
                 temp = torch.from_numpy(self.word2vec[word])
                 temp = temp.reshape(-1, temp.size(0))
-                pred = self.net(temp)
+                pred = network(temp)
                 total += 1
                 if pred.data * torch.tensor(label).data > 0:
                     correct += 1

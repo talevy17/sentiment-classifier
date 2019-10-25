@@ -1,4 +1,5 @@
 import nltk
+from nltk.corpus import stopwords
 
 from Tokenizer import Tokenizer as tk
 from DataCleaner import DataCleaner as dc
@@ -13,6 +14,7 @@ import logging
 from gensim.models import Word2Vec
 import re
 from FullyConnected import FullyConnected as Fc
+from collections import defaultdict
 
 from sklearn.linear_model import LinearRegression
 
@@ -112,7 +114,7 @@ def aaa():
     model_test = gensim.models.Word2Vec(min_count=20, size=300, window=5, sg=1, iter=1)
     model_test.build_vocab(tokenSongs)
     model_test.train(tokenSongs,total_examples=model.corpus_count,epochs=1)
-
+    network = Fc()
     # train_data, train_labels, valid_data, valid_labels = cross_validation(data, labels)
     fc = SimpleNeuralNet(model)
     # print(len(train_labels))
@@ -173,11 +175,109 @@ def fully_connected(model,modelSEM,data, labels,network):
     dict  = fc.test(model.wv.vocab,model,network)
     return dict
 
+def printDictAfterFC(dict):
+    for i in sorted(dict.values(),reverse = True):
+        for j in dict.keys():
+            if dict.get(j) == i:
+                print(j, ":", i)
+
+def load3000(model, path, file, name):
+
+    tok = dc(path, ['english', 'spanish'], '''!()-[]{};:"\,<>./?@#$%^&*_~''')
+    data = file['lyrics']
+    sentences = []
+    punct = '''!()-[]{};:"\,<>./?@#$%^&*_~'''
+
+    # sentences_t =[]
+    # for song_lyrics in data:
+    #     sentences_t += tok.tokenize_sentences(song_lyrics)
+    # with open("Dataset/{}".format(name),'w') as f:
+    #     for s in sentences_t:
+    #         for i in s:
+    #             f.write(str(i) + "\n")
+
+    # word_freq = defaultdict(int)
+    #
+    # with open("./Dataset/" + name,'r') as f:
+    #     for w in f:
+    #             w = w.strip()
+    #             sentences.append(w)
+    #             word_freq[w]+=1
+
+    # flat_list = [item for sublist in songs for item in sublist]
+    # word_count = sorted(word_freq, key=word_freq.get, reverse=True)[:3000]
+    # words = [w for w in word_count if not w in set(stopwords.words("english")) and len(w)>3]
+    # with open("Dataset/3000_Words",'w') as f:
+    #     for s in words:
+    #             f.write(str(s) + "\n")
+    words_final =[]
+    with open("./Dataset/3000_Words",'r') as f:
+        for s in f:
+            words_final.append(s.strip())
+    print(words_final)
+    return words_final
+
+# def makeList50PerGenre(words_3000, path):
+#     tok = dc(path, ['english', 'spanish'], '''!()-[]{};:"\,<>./?@#$%^&*_~''')
+#     final_list = []
+#     data = pd.read_csv(path)
+#     data = pd.DataFrame (data, columns=['genre','lyrics'])
+#     grouped = data.groupby('genre')
+#     genres = data['genre'].items()
+#     songs = data['lyrics'].items()
+#     #data_songs = pd.read_csv('path')
+#     dict = {}
+#     for (song,genre) in zip(songs,genres):
+#         print(str(genre) + ' : ' + str(song))
+#         for word in song:
+#             if genre in dict[word]
+#         word_freq = defaultdict(int)
+#         words = []
+#         words += tok.tokenize_sentences(str(song))
+#         for w in words:
+#             for i in w:
+#                 if words_3000.count(i) >0:
+#                     word_freq[i] +=1
+#     final_list+= sorted(word_freq, key=word_freq.get, reverse=True)[:50]
+    with open("Dataset/50_Words_per_genre",'w') as f:
+        for s in final_list:
+                f.write(str(s) + "\n")
+    words_final =[]
+    with open("./Dataset/50_Words_per_genre",'r') as f:
+        for s in f:
+            words_final.append(s.strip())
+    print(words_final)
+    print(len(words_final))
+    return words_final
+
+def dictGenreLyrics(path):
+    dict ={}
+    data =pd.read_csv(path)
+    tok = dc(path, ['english', 'spanish'], '''!()-[]{};:"\,<>./?@#$%^&*_~''')
+    genres = data[data['genre'].notnull()]
+    print (genres)
+
+
+    for i in range(len(data)):
+        lyrics = data.get_value(i,5,takeable= True)
+        genre = data.get_value(i,4,takeable= True)
+        lir_parsed = tok.tokenize_sentences(lyrics)
+        dict[genre] += lir_parsed
+
+    f = open('Dataset/Dictionary_genre_lyrics.txt','w')
+    f.write(str(dict))
+    f.close()
+
+    f = open('./Dataset/Dictionary_genre_lyrics.txt','r')
+    loadDic=f.read()
+    f.close()
+    return loadDic
+
 
 def main():
     path = './Dataset/lyrics.csv'
-    file,tokenizer = load(path)
-    data = file['lyrics']
+    fileSongs,tokenizer = load(path)
+    dataSongs = fileSongs['lyrics']
     name = "LIN380new"
     #buildModelWordToVec(path,data,name)
     toOpen = "./Dataset/" + name
@@ -185,23 +285,20 @@ def main():
     #similarities(model)
     #VectorsAlgebra(model)
     #distances(model, 'woman','girl')
-    file = open(Constants.SEM_EVAL.value, 'r')
+    fileSEM = open(Constants.SEM_EVAL.value, 'r')
     #data = shuffle_data(file.readlines())
-    data = (file.readlines())
+    dataSEM = (fileSEM.readlines())
 
-    file.close()
-    data, labels, Semtok = split_data(data)
+    fileSEM.close()
+    dataSEM, labelsSEM, Semtok = split_data(dataSEM)
     #word2vec(Semtok, 'SemEVAL', 300, 1, 4,10,1e-3)
-    modelSem = Word2Vec.load('./Dataset/SemEVAL')
+    #modelSem = Word2Vec.load('./Dataset/SemEVAL')
     network = Fc()
-    dict =fully_connected(model,modelSem,data,labels,network)
-
-
-    for i in sorted(dict.values(),reverse = True):
-        for j in dict.keys():
-            if dict.get(j) == i:
-                print(j, ":", i)
-
+    #dict =fully_connected(model,modelSem,dataSEM,labelsSEM,network)
+    #printDictAfterFC(dict)
+    words_final3000 = load3000(model,path,fileSongs, 'sentences')
+    #makeList50PerGenre(words_final3000,path)
+    dictGenreLyrics(path)
 
 if __name__ == "__main__":
     main()
