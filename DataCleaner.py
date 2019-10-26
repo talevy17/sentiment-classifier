@@ -4,9 +4,9 @@ import re
 import nltk
 from nltk.tokenize import sent_tokenize, WhitespaceTokenizer
 from nltk.corpus import stopwords
-
+import numpy
 from collections import defaultdict
-
+import math
 
 class DataCleaner:
     def __init__(self, data, langs , punctuation):

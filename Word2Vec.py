@@ -1,5 +1,12 @@
+import csv
+import pickle
+
 import nltk
 from nltk.corpus import stopwords
+from sklearn.decomposition import PCA
+from sklearn.manifold import TSNE
+from sklearn import preprocessing
+from sklearn.feature_extraction.text import CountVectorizer
 
 from Tokenizer import Tokenizer as tk
 from DataCleaner import DataCleaner as dc
@@ -15,8 +22,10 @@ from gensim.models import Word2Vec
 import re
 from FullyConnected import FullyConnected as Fc
 from collections import defaultdict
-
+import numpy as np
 from sklearn.linear_model import LinearRegression
+import matplotlib.pyplot as plt
+import seaborn as sns
 
 warnings.filterwarnings(action='ignore')
 
@@ -197,18 +206,16 @@ def load3000(model, path, file, name):
     #             f.write(str(i) + "\n")
 
     # word_freq = defaultdict(int)
-    #
+    # stop = set(stopwords.words("english"))
     # with open("./Dataset/" + name,'r') as f:
     #     for w in f:
     #             w = w.strip()
-    #             sentences.append(w)
-    #             word_freq[w]+=1
-
-    # flat_list = [item for sublist in songs for item in sublist]
-    # word_count = sorted(word_freq, key=word_freq.get, reverse=True)[:3000]
-    # words = [w for w in word_count if not w in set(stopwords.words("english")) and len(w)>3]
+    #             if not w in stop and len(w)>2:
+    #                 sentences.append(w)
+    #                 word_freq[w]+=1
+    # word_freq = sorted(word_freq, key=word_freq.get, reverse=True)[:3000]
     # with open("Dataset/3000_Words",'w') as f:
-    #     for s in words:
+    #     for s in word_freq:
     #             f.write(str(s) + "\n")
     words_final =[]
     with open("./Dataset/3000_Words",'r') as f:
@@ -217,61 +224,136 @@ def load3000(model, path, file, name):
     print(words_final)
     return words_final
 
-# def makeList50PerGenre(words_3000, path):
-#     tok = dc(path, ['english', 'spanish'], '''!()-[]{};:"\,<>./?@#$%^&*_~''')
-#     final_list = []
-#     data = pd.read_csv(path)
-#     data = pd.DataFrame (data, columns=['genre','lyrics'])
-#     grouped = data.groupby('genre')
-#     genres = data['genre'].items()
-#     songs = data['lyrics'].items()
-#     #data_songs = pd.read_csv('path')
-#     dict = {}
-#     for (song,genre) in zip(songs,genres):
-#         print(str(genre) + ' : ' + str(song))
-#         for word in song:
-#             if genre in dict[word]
-#         word_freq = defaultdict(int)
-#         words = []
-#         words += tok.tokenize_sentences(str(song))
-#         for w in words:
-#             for i in w:
-#                 if words_3000.count(i) >0:
-#                     word_freq[i] +=1
-#     final_list+= sorted(word_freq, key=word_freq.get, reverse=True)[:50]
-    with open("Dataset/50_Words_per_genre",'w') as f:
-        for s in final_list:
-                f.write(str(s) + "\n")
-    words_final =[]
-    with open("./Dataset/50_Words_per_genre",'r') as f:
-        for s in f:
-            words_final.append(s.strip())
-    print(words_final)
-    print(len(words_final))
-    return words_final
+
+def words_3000_print(word_3000, dic_gen_lyrics):
+    dict = dic_gen_lyrics
+    dic_most = {}
+    for w in word_3000:
+        dic_most[w] = w + " : "
+    for genre in dict.keys():
+        word_freq = defaultdict(int)
+        for sentence in dict[genre]:
+            for word in sentence:
+                word_freq[word] +=1
+        for w in dic_most.keys():
+            dic_most[w] +=genre +" " + str(word_freq[w])+ " "
+    for i in dic_most.values():
+        print(i)
+    return dic_most
+
+
+
+
+def makeList50PerGenre(words_3000, dic_gen_songs ,path):
+    # dic_50 ={}
+    # stop = set(stopwords.words("english"))
+    # dict = dic_gen_songs
+    # for genre in dict.keys():
+    #     word_freq = defaultdict(int)
+    #     for sent in dict[genre]:
+    #         for word in sent:
+    #             if not word in stop and len(word)>2:
+    #                 word_freq[word] += 1
+    #     dic_50[genre]= sorted(word_freq, key=word_freq.get, reverse=True)[:50]
+    # output = open('Dataset/Dict_50.pkl', 'wb')
+    # pickle.dump(dic_50, output)
+    # output.close()
+
+    pkl_file = open('./Dataset/Dict_50.pkl', 'rb')
+    loadDic = pickle.load(pkl_file)
+    pkl_file.close()
+    return loadDic
+
+
+
 
 def dictGenreLyrics(path):
     dict ={}
     data =pd.read_csv(path)
     tok = dc(path, ['english', 'spanish'], '''!()-[]{};:"\,<>./?@#$%^&*_~''')
-    genres = data[data['genre'].notnull()]
-    print (genres)
+    genres = data['genre'].dropna().drop_duplicates().tolist()
+    # for g in genres:
+    #     dict[g] = []
+    # for i in range(len(data)):
+    #     lyrics = data.get_value(i,5,takeable= True)
+    #     if not pd.isnull(lyrics):
+    #         genre = data.get_value(i,4,takeable= True)
+    #         lir_parsed = tok.tokenize_sentences(lyrics)
+    #         dict[genre] += lir_parsed
+    # output = open('Dataset/Dict_gen_songs.pkl', 'wb')
+    # pickle.dump(dict, output)
+    # output.close()
 
+    pkl_file = open('./Dataset/Dict_gen_songs.pkl', 'rb')
+    loadDic = pickle.load(pkl_file)
+    pkl_file.close()
 
-    for i in range(len(data)):
-        lyrics = data.get_value(i,5,takeable= True)
-        genre = data.get_value(i,4,takeable= True)
-        lir_parsed = tok.tokenize_sentences(lyrics)
-        dict[genre] += lir_parsed
-
-    f = open('Dataset/Dictionary_genre_lyrics.txt','w')
-    f.write(str(dict))
-    f.close()
-
-    f = open('./Dataset/Dictionary_genre_lyrics.txt','r')
-    loadDic=f.read()
-    f.close()
     return loadDic
+
+def display_2D_results(w2v_model, most_frequent_words_by_genre):
+    number_of_colors = len(most_frequent_words_by_genre)
+
+    color = ["#" + ''.join([random.choice('0123456789ABCDEF') for j in range(6)])
+             for i in range(number_of_colors)]
+    print(color)
+
+    color_list = []
+    arrays = np.zeros((0, 300), dtype='f')
+    for counter, (genre, words) in enumerate(most_frequent_words_by_genre.items()):
+        for word in words:
+            try:
+                vec_word = [w2v_model[word]]
+                color_list.append(color[counter])
+                arrays = np.append(arrays, vec_word, axis=0)
+            except:
+                print("'", word, "'", "does not appear in the model")
+
+    reduce = PCA(n_components=50).fit_transform(arrays)
+
+    # Finds t-SNE coordinates for 2 dimensions
+    np.set_printoptions(suppress=True)
+
+    Y = TSNE(n_components=2, random_state=0, perplexity=15).fit_transform(reduce)
+
+    # Sets everything up to plot
+    df = pd.DataFrame({'x': [x for x in Y[:, 0]],
+                       'y': [y for y in Y[:, 1]],
+                       'color': color_list})
+
+    fig, _ = plt.subplots()
+    fig.set_size_inches(9, 9)
+    sns.regplot(data=df, x="x", y="y", fit_reg=False, marker="o", scatter_kws={'facecolors': df['color']})
+
+    plt.xlim(Y[:, 0].min() - 10, Y[:, 0].max() + 10)
+    plt.ylim(Y[:, 1].min() - 10, Y[:, 1].max() + 10)
+    plt.show()
+
+def text_classification_part(data_set, w2v_model):
+    data_set = data_set[data_set["genre"] != "Not Available"]
+    data_set = data_set[data_set["genre"].notnull()]
+    data_set['genre'].value_counts().plot.bar()
+    # plt.show()
+
+    genres_to_numbers = preprocessing.LabelEncoder()
+    # Converting string labels into numbers.
+    genres_encoded = genres_to_numbers.fit_transform(data_set["genre"].tolist())
+
+    classes = list(genres_to_numbers.classes_)
+
+    X_train, X_test, y_train, y_test = train_test_split(data_set["lyrics"], genres_encoded, test_size=0.2,
+                                                        random_state=1)
+
+    X_train, X_val, y_train, y_val = train_test_split(X_train, y_train, test_size=0.2, random_state=1)
+
+    cleared_songs_train, cleared_y_train = clean_text(X_train, y_train)
+    cleared_songs_test, cleared_y_test = clean_text(X_test, y_test)
+
+    vectorizer = CountVectorizer(analyzer="word", tokenizer=None, preprocessor=None, stop_words=None,
+                                 max_features=15000)
+
+    # text_classification_bow(cleared_songs_train, cleared_songs_test, vectorizer, cleared_y_train, cleared_y_test,
+    #                         classes)
+    text_classification_avg_vec(w2v_model, cleared_songs_train, cleared_songs_test, cleared_y_train,cleared_y_test, classes)
 
 
 def main():
@@ -297,8 +379,15 @@ def main():
     #dict =fully_connected(model,modelSem,dataSEM,labelsSEM,network)
     #printDictAfterFC(dict)
     words_final3000 = load3000(model,path,fileSongs, 'sentences')
-    #makeList50PerGenre(words_final3000,path)
-    dictGenreLyrics(path)
+    dict_gen_songs = dictGenreLyrics(path)
+    #forPrint = words_3000_print(words_final3000,dict_gen_songs)
+    #words_final_50 = makeList50PerGenre(words_final3000,dict_gen_songs,path)
+    #display_2D_results(model,words_final_50)
+
+    print('hi')
+
+
+
 
 if __name__ == "__main__":
     main()
