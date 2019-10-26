@@ -1,19 +1,20 @@
-import csv
 import pickle
-
 import nltk
 from nltk.corpus import stopwords
 from sklearn.decomposition import PCA
 from sklearn.manifold import TSNE
 from sklearn import preprocessing
+from sklearn.naive_bayes import MultinomialNB
 from sklearn.feature_extraction.text import CountVectorizer
-
-from Tokenizer import Tokenizer as tk
+from sklearn.model_selection import train_test_split
+from sklearn.metrics import confusion_matrix
+from sklearn.metrics import classification_report
+from sklearn.neural_network import MLPClassifier
 from DataCleaner import DataCleaner as dc
+from sklearn.preprocessing import StandardScaler
 from SimpleNeuralNet import SimpleNeuralNet
 from enum import Enum
 import numpy
-import gensim
 import random
 import warnings
 import pandas as pd
@@ -23,9 +24,9 @@ import re
 from FullyConnected import FullyConnected as Fc
 from collections import defaultdict
 import numpy as np
-from sklearn.linear_model import LinearRegression
 import matplotlib.pyplot as plt
 import seaborn as sns
+from sklearn import tree
 
 warnings.filterwarnings(action='ignore')
 
@@ -110,34 +111,13 @@ def shuffle_data(x):
     random.shuffle(x)
     return x
 
-
-def aaa():
-    file = open(Constants.SEM_EVAL.value, 'r')
-    data = shuffle_data(file.readlines())
-    file.close()
-    data, labels, Semtok = split_data(data)
-    model = gensim.models.Word2Vec(min_count=20, size=300, window=5, sg=1, iter=1)
-    model.build_vocab(Semtok)
-    toke = tk('./Dataset/lyrics15LIN.csv', ['english', 'spanish'], '''!()-[]{};:"\,<>./?@#$%^&*_~''')
-    tokenSongs = toke.tokenize()
-    model_test = gensim.models.Word2Vec(min_count=20, size=300, window=5, sg=1, iter=1)
-    model_test.build_vocab(tokenSongs)
-    model_test.train(tokenSongs,total_examples=model.corpus_count,epochs=1)
-    network = Fc()
-    # train_data, train_labels, valid_data, valid_labels = cross_validation(data, labels)
-    fc = SimpleNeuralNet(model)
-    # print(len(train_labels))
-    fc.train(data, labels,network)
-    fc.test(Semtok, model_test, network)
-    #fc.validate(valid_data, valid_labels)
-    # net.train(data, labels)
-    # net.validate(data, labels)
 def load(path):
         logging.basicConfig(format="%(levelname)s - %(asctime)s: %(message)s", datefmt= '%H:%M:%S', level=logging.INFO)
         file = pd.read_csv(path)
         file = file[file['lyrics'].notnull()]
         tokenizer = nltk.data.load('tokenizers/punkt/english.pickle')
         return file,tokenizer
+
 def word2vec(sentences, name, num_features=300, min_word_count=40, workers=4,
              context=10, downsampling=1e-3):
     model = Word2Vec(sentences,
@@ -290,7 +270,7 @@ def dictGenreLyrics(path):
 
     return loadDic
 
-def display_2D_results(w2v_model, most_frequent_words_by_genre):
+def display_2D_results(model, most_frequent_words_by_genre):
     number_of_colors = len(most_frequent_words_by_genre)
 
     color = ["#" + ''.join([random.choice('0123456789ABCDEF') for j in range(6)])
@@ -302,7 +282,7 @@ def display_2D_results(w2v_model, most_frequent_words_by_genre):
     for counter, (genre, words) in enumerate(most_frequent_words_by_genre.items()):
         for word in words:
             try:
-                vec_word = [w2v_model[word]]
+                vec_word = [model[word]]
                 color_list.append(color[counter])
                 arrays = np.append(arrays, vec_word, axis=0)
             except:
@@ -328,32 +308,101 @@ def display_2D_results(w2v_model, most_frequent_words_by_genre):
     plt.ylim(Y[:, 1].min() - 10, Y[:, 1].max() + 10)
     plt.show()
 
-def text_classification_part(data_set, w2v_model):
-    data_set = data_set[data_set["genre"] != "Not Available"]
-    data_set = data_set[data_set["genre"].notnull()]
-    data_set['genre'].value_counts().plot.bar()
+def text_Classification(data, model):
+    data = data[data["genre"] != "Not Available"]
+    data = data[data["genre"].notnull()]
+    data['genre'].value_counts().plot.bar()
     # plt.show()
 
-    genres_to_numbers = preprocessing.LabelEncoder()
-    # Converting string labels into numbers.
-    genres_encoded = genres_to_numbers.fit_transform(data_set["genre"].tolist())
+    genresNumbers = preprocessing.LabelEncoder()
+    EncodedGenres = genresNumbers.fit_transform(data["genre"].tolist())
 
-    classes = list(genres_to_numbers.classes_)
+    classes = list(genresNumbers.classes_)
 
-    X_train, X_test, y_train, y_test = train_test_split(data_set["lyrics"], genres_encoded, test_size=0.2,
+    X_train, X_test, y_train, y_test = train_test_split(data["lyrics"], EncodedGenres, test_size=0.2,
                                                         random_state=1)
 
     X_train, X_val, y_train, y_val = train_test_split(X_train, y_train, test_size=0.2, random_state=1)
+    n = 3000
+    Strain, Ytrain = CleanText(X_train, y_train,n)
+    Stest, Ytest = CleanText(X_test, y_test, n)
 
-    cleared_songs_train, cleared_y_train = clean_text(X_train, y_train)
-    cleared_songs_test, cleared_y_test = clean_text(X_test, y_test)
+    BagOfWords(Strain, Stest, Ytrain, Ytest,
+                            classes)
+    ClassificationAVG(model, Strain, Stest, Ytrain,Ytest, classes)
 
+def ClassificationAVG(model, Strain, Stest,Ytrain, Ytest, classes):
+    train_x = MeanVector(model, Strain)
+    test_x = MeanVector(model, Stest)
+    scaler = StandardScaler()
+    scaler.fit(train_x)
+    x_tarin_scaled = scaler.transform(train_x)
+    x_test_scaled = scaler.transform(test_x)
+    n = len(x_tarin_scaled)
+
+    clf = MLPClassifier(hidden_layer_sizes=(n,), activation='relu',solver='adam',alpha=0.0001)
+    clf.fit(x_tarin_scaled, Ytrain)
+
+    pred = clf.predict(x_test_scaled)
+    print(confusion_matrix(Ytest, pred))
+    print(classification_report(Ytest, pred))
+
+def MeanVector(model, sentences):
+    avg_vectors = []
+    # remove out-of-vocabulary words
+    for words in sentences:
+        flat_list = [word for word in words.split() if word in model.wv.vocab]
+        if len(flat_list) >= 1:
+            avg_vectors.append(np.mean(model[flat_list], axis=0))
+    return avg_vectors
+
+
+def CleanText(data_X, data_Y,n):
+    xSongs = []
+    ySongs = []
+    for i, val in enumerate(data_X[:n]):
+        if ((i + 1) % 10000 == 0):
+            print("Lyrics %d of %d\n" % (i + 1, data_X.size))
+        if not (type(val) == float):
+            sent = getSong(val, remove_stop_words=True)
+            flat_list = [item for sublist in sent for item in sublist]
+            if len(flat_list) >0:
+                xSongs.append(" ".join(flat_list))
+                ySongs.append(data_Y[i])
+    return xSongs, ySongs
+
+def getSong(song, remove_stop_words=False, genre_bool=False, genre_name=""):
+    tokenizer = nltk.data.load('tokenizers/punkt/english.pickle')
+    song_sentences = tokenizer.tokenize(song.strip())
+    sentences = []
+    genre_type = []
+    for song_sentence in song_sentences:
+        # If a sentence is empty, skip it
+        if len(song_sentence) > 0:
+            # Otherwise, call review_to_wordlist to get a list of words
+            words = re.sub(r'[^a-zA-Z]', " ", song_sentence.lower()).split()
+            if remove_stop_words:
+                words = [w for w in words if not w in set(stopwords.words("english"))]
+            sentences.append(words)
+            if genre_bool:
+                genre_type.append(genre_name)
+
+    if not genre_bool:
+        return sentences
+    return genre_type
+
+def BagOfWords(cleared_songs_train, cleared_songs_test , cleared_y_train, cleared_y_test,
+                            classes):
     vectorizer = CountVectorizer(analyzer="word", tokenizer=None, preprocessor=None, stop_words=None,
                                  max_features=15000)
-
-    # text_classification_bow(cleared_songs_train, cleared_songs_test, vectorizer, cleared_y_train, cleared_y_test,
-    #                         classes)
-    text_classification_avg_vec(w2v_model, cleared_songs_train, cleared_songs_test, cleared_y_train,cleared_y_test, classes)
+    X_train_bows = vectorizer.fit(cleared_songs_train)
+    X_train_bows = vectorizer.transform(cleared_songs_train).toarray()
+    X_test_bows = vectorizer.transform(cleared_songs_test).toarray()
+    bow = MultinomialNB()
+    bow.fit(X_train_bows, cleared_y_train)
+    y_pred = bow.predict(X_test_bows)
+    print(confusion_matrix(cleared_y_test, y_pred))
+    print(classification_report(cleared_y_test, y_pred))
 
 
 def main():
@@ -378,15 +427,12 @@ def main():
     network = Fc()
     #dict =fully_connected(model,modelSem,dataSEM,labelsSEM,network)
     #printDictAfterFC(dict)
-    words_final3000 = load3000(model,path,fileSongs, 'sentences')
-    dict_gen_songs = dictGenreLyrics(path)
+    #words_final3000 = load3000(model,path,fileSongs, 'sentences')
+    #dict_gen_songs = dictGenreLyrics(path)
     #forPrint = words_3000_print(words_final3000,dict_gen_songs)
     #words_final_50 = makeList50PerGenre(words_final3000,dict_gen_songs,path)
     #display_2D_results(model,words_final_50)
-
-    print('hi')
-
-
+    text_Classification(fileSongs,model)
 
 
 if __name__ == "__main__":
