@@ -1,11 +1,11 @@
 import pickle
 import nltk
 from nltk.corpus import stopwords
-from sklearn.decomposition import PCA
+from sklearn.decomposition import PCA, TruncatedSVD
 from sklearn.manifold import TSNE
 from sklearn import preprocessing
 from sklearn.naive_bayes import MultinomialNB
-from sklearn.feature_extraction.text import CountVectorizer
+from sklearn.feature_extraction.text import CountVectorizer, TfidfVectorizer
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import confusion_matrix
 from sklearn.metrics import classification_report
@@ -14,6 +14,7 @@ from DataCleaner import DataCleaner as dc
 from sklearn.preprocessing import StandardScaler
 from SimpleNeuralNet import SimpleNeuralNet
 from enum import Enum
+from sklearn.feature_extraction.text import TfidfVectorizer
 import numpy
 import random
 import warnings
@@ -323,13 +324,13 @@ def text_Classification(data, model):
                                                         random_state=1)
 
     X_train, X_val, y_train, y_val = train_test_split(X_train, y_train, test_size=0.2, random_state=1)
-    n = 3000
-    Strain, Ytrain = CleanText(X_train, y_train,n)
+    n = 10000
     Stest, Ytest = CleanText(X_test, y_test, n)
+    Strain, Ytrain = CleanText(X_train, y_train,n)
 
-    BagOfWords(Strain, Stest, Ytrain, Ytest,
-                            classes)
-    ClassificationAVG(model, Strain, Stest, Ytrain,Ytest, classes)
+    TfIdf(data,classes, EncodedGenres,n)
+    #BagOfWords(Strain, Stest, Ytrain, Ytest, classes)
+    #ClassificationAVG(model, Strain, Stest, Ytrain,Ytest, classes)
 
 def ClassificationAVG(model, Strain, Stest,Ytrain, Ytest, classes):
     train_x = MeanVector(model, Strain)
@@ -355,20 +356,41 @@ def MeanVector(model, sentences):
         if len(flat_list) >= 1:
             avg_vectors.append(np.mean(model[flat_list], axis=0))
     return avg_vectors
+def tfidf_mean_vectors(X):
+    vectorizer = TfidfVectorizer(min_df=1)
+    X_tfidf = vectorizer.fit_transform(X)
 
+    tfidf = X_tfidf.todense()
+    # TFIDF of words not in the doc will be 0, so replace them with nan
+    tfidf[tfidf == 0] = np.nan
+    # Use nanmean of numpy which will ignore nan while calculating the mean
+    X_tfidf_mean = np.nanmean(tfidf, axis=1)
+    return X_tfidf_mean
+
+def TfIdf(data_set, classes, genres_encoded,n):
+    X_tfidf, y_labels = CleanText(data_set["lyrics"], genres_encoded,n)
+    X_tfidf_clean = tfidf_mean_vectors(X_tfidf)
+    X_train, X_test, y_train, y_test = train_test_split(X_tfidf_clean, y_labels, test_size=0.2, random_state=1)
+    clf = MLPClassifier(hidden_layer_sizes=(len(X_train),))
+    clf.fit(X_train, y_train)
+
+    # Predict the response for test dataset
+    y_pred = clf.predict(X_test)
+    print(confusion_matrix(y_test, y_pred))
+    print(classification_report(y_test, y_pred))
+    print("hello")
 
 def CleanText(data_X, data_Y,n):
     xSongs = []
     ySongs = []
     for i, val in enumerate(data_X[:n]):
-        if ((i + 1) % 10000 == 0):
-            print("Lyrics %d of %d\n" % (i + 1, data_X.size))
         if not (type(val) == float):
             sent = getSong(val, remove_stop_words=True)
-            flat_list = [item for sublist in sent for item in sublist]
-            if len(flat_list) >0:
-                xSongs.append(" ".join(flat_list))
-                ySongs.append(data_Y[i])
+            temp = [item for sublist in sent for item in sublist]
+            if len(temp) >0:
+                if not temp[0] == " ":
+                    xSongs.append(" ".join(temp))
+                    ySongs.append(data_Y[i])
     return xSongs, ySongs
 
 def getSong(song, remove_stop_words=False, genre_bool=False, genre_name=""):
@@ -391,19 +413,18 @@ def getSong(song, remove_stop_words=False, genre_bool=False, genre_name=""):
         return sentences
     return genre_type
 
-def BagOfWords(cleared_songs_train, cleared_songs_test , cleared_y_train, cleared_y_test,
+def BagOfWords(Strain, Stest , Ytrain, Ytest,
                             classes):
     vectorizer = CountVectorizer(analyzer="word", tokenizer=None, preprocessor=None, stop_words=None,
                                  max_features=15000)
-    X_train_bows = vectorizer.fit(cleared_songs_train)
-    X_train_bows = vectorizer.transform(cleared_songs_train).toarray()
-    X_test_bows = vectorizer.transform(cleared_songs_test).toarray()
+    X_train_bows = vectorizer.fit(Strain)
+    X_train_bows = vectorizer.transform(Strain).toarray()
+    X_test_bows = vectorizer.transform(Stest).toarray()
     bow = MultinomialNB()
-    bow.fit(X_train_bows, cleared_y_train)
+    bow.fit(X_train_bows, Ytrain)
     y_pred = bow.predict(X_test_bows)
-    print(confusion_matrix(cleared_y_test, y_pred))
-    print(classification_report(cleared_y_test, y_pred))
-
+    print(confusion_matrix(Ytest, y_pred))
+    print(classification_report(Ytest, y_pred))
 
 def main():
     path = './Dataset/lyrics.csv'
